@@ -13,9 +13,7 @@ import { Strong, Text, TextLink } from '@/components/text';
 import { Link } from '@/components/link';
 import { useSession } from "@/contexts/SessionContext";
 
-export const metadata = {
-  title: 'Register',
-};
+  
 
 export default function Register() {
   const [firstname, setFirstname] = useState("");
