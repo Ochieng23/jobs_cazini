@@ -3,9 +3,10 @@
 
 import Image from "next/image";
 import { useState, useMemo } from "react";
-import { Link } from "@/components/Link";
+
 import { useSession } from "@/contexts/SessionContext";
 import { Avatar } from "@/components/avatar";
+import Link from "next/link"
 import {
   Dropdown,
   DropdownButton,
