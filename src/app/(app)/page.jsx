@@ -3,10 +3,9 @@
 
 import Image from "next/image";
 import { useState, useMemo } from "react";
-
+import { Link } from "@/components/Link"; // Fixed import
 import { useSession } from "@/contexts/SessionContext";
 import { Avatar } from "@/components/avatar";
-import Link from "next/link"
 import {
   Dropdown,
   DropdownButton,
@@ -119,7 +118,14 @@ function AccountDropdownMenu({ anchor }) {
 export default function JobHome() {
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("Nairobi, Kenya");
-  const { session } = useSession();
+  const { session, isLoading } = useSession();
+
+  // Debug logs (disabled in production)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('JobHome: Path:', typeof window !== 'undefined' ? window.location.pathname : 'server');
+    console.log('JobHome: Session:', session);
+    console.log('JobHome: isLoading:', isLoading);
+  }
 
   const filtered = useMemo(() => {
     const term = keyword.trim().toLowerCase();
@@ -204,7 +210,7 @@ export default function JobHome() {
                 Search jobs
               </button>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs sm:text-sm text-slate-300">
+            <div className="flex flex-wrap gap-2 text-xs sm:text-sm text-slate-200">
               <span className="text-slate-400">Popular searches:</span>
               {["Finance", "Accounting", "Data", "Accountant", "Customer Service"].map((term) => (
                 <button
@@ -219,8 +225,10 @@ export default function JobHome() {
           </div>
         </div>
         {/* Account/Login Button */}
-        <div className="absolute top-3  right-3 z-20 sm:top-4 sm:right-4">
-          {session?.user?.id ? (
+        <div className="absolute top-3 right-4 z-20 sm:top-4 sm:right-4">
+          {isLoading ? (
+            <div className="size-8 bg-gray-50 rounded-full animate-pulse" />
+          ) : session?.user?.id ? (
             <Dropdown>
               <DropdownButton className="p-0">
                 <Avatar
@@ -300,7 +308,7 @@ export default function JobHome() {
           <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
             <Logo
               alt="Cazini logo"
-             
+              
               className="sm:w-8 sm:h-8"
             />
             <span className="text-lg sm:text-xl font-bold tracking-wide">

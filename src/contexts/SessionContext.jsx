@@ -1,4 +1,4 @@
-// src/context/SessionContext.jsx
+
 "use client";
 
 import { createContext, useContext, useState, useEffect, useRef, useMemo } from "react";
@@ -6,16 +6,18 @@ import { useRouter, usePathname } from "next/navigation";
 
 const SessionContext = createContext();
 
-export const SessionProvider = ({ children }) => {
+export function SessionProvider({ children }) {
   const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const BaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:10255";
   const router = useRouter();
   const pathname = usePathname();
   const hasFetched = useRef(false);
 
   const fetchSession = async () => {
-    console.log(`SessionContext - Fetching session from ${BaseUrl}/auth/session`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`SessionContext - Fetching session from ${BaseUrl}/auth/session`);
+    }
     const response = await fetch(`${BaseUrl}/auth/session`, {
       method: "GET",
       credentials: "include",
@@ -24,12 +26,16 @@ export const SessionProvider = ({ children }) => {
     });
 
     if (!response.ok) {
-      console.error(`SessionContext - Fetch failed: ${response.status} - ${await response.text()}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error(`SessionContext - Fetch failed: ${response.status} - ${await response.text()}`);
+      }
       throw new Error("Failed to fetch session");
     }
 
     const data = await response.json();
-    console.log(`SessionContext - Raw session data:`, JSON.stringify(data, null, 2));
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`SessionContext - Raw session data:`, JSON.stringify(data, null, 2));
+    }
 
     const sessionData = {
       user: {
@@ -37,13 +43,16 @@ export const SessionProvider = ({ children }) => {
         email: data.user?.email || null,
         role: data.user?.role || null,
         firstname: data.user?.firstname || null,
+        lastname: data.user?.lastname || null,
       },
-      token: data.token || null, // Add token if provided by backend
+      token: data.token || null,
       expires: data.session?.expires || null,
     };
 
     if (!sessionData.user.id || (sessionData.expires && new Date() > new Date(sessionData.expires))) {
-      console.warn(`SessionContext - Invalid or expired session:`, sessionData);
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`SessionContext - Invalid or expired session:`, sessionData);
+      }
       throw new Error("Invalid or expired session");
     }
 
@@ -70,7 +79,9 @@ export const SessionProvider = ({ children }) => {
         throw new Error("Logout failed");
       }
     } catch (error) {
-      console.error(`SessionContext - Logout error: ${error.message}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error(`SessionContext - Logout error: ${error.message}`);
+      }
     }
 
     setSession(null);
@@ -82,38 +93,46 @@ export const SessionProvider = ({ children }) => {
     if (hasFetched.current) return;
 
     const initializeSession = async () => {
-      setLoading(true);
+      setIsLoading(true);
       try {
         const sessionData = await fetchSession();
         setSession(sessionData);
-        console.log(`SessionContext - Session set:`, JSON.stringify(sessionData, null, 2));
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`SessionContext - Session set:`, JSON.stringify(sessionData, null, 2));
+        }
       } catch (error) {
         setSession(null);
-        console.error(`SessionContext - Session initialization error: ${error.message}`);
-        if (pathname !== "/login") {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error(`SessionContext - Session initialization error: ${error.message}`);
+          console.log(`SessionContext - Pathname: ${pathname}, Public routes: ['/', '/login']`);
+          console.log(`SessionContext - Will redirect: ${!['/', '/login'].includes(pathname)}`);
+        }
+        // Only redirect for protected routes
+        const publicRoutes = ['/', '/login'];
+        if (!publicRoutes.includes(pathname)) {
           router.replace("/login");
         }
       } finally {
-        setLoading(false);
+        setIsLoading(false);
         hasFetched.current = true;
       }
     };
 
     initializeSession();
-  }, [pathname, router]); // Keep pathname to redirect on error
+  }, [pathname, router]);
 
   const value = useMemo(
-    () => ({ session, loading, logout, updateSession }),
-    [session, loading]
+    () => ({ session, isLoading, logout, updateSession }),
+    [session, isLoading]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
-};
+}
 
-export const useSession = () => {
+export function useSession() {
   const context = useContext(SessionContext);
   if (context === undefined) {
     throw new Error("useSession must be used within a SessionProvider");
   }
   return context;
-};
+}
